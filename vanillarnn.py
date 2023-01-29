@@ -5,6 +5,8 @@ Building a Vanilla RNN
 Model and trainer implementation 
 '''
 import torch 
+import pandas as pd
+import numpy as np
 import plotly
 from torch import nn
 
@@ -47,6 +49,19 @@ def train(model, dataset, loss_function, optim, epochs, device):
             if(i % 10):
               print("Step: {}/{}, current Epoch loss: {:.4f}".format(i, len(dataset), loss))  
 
+def test_train_split(df):
+    mask = np.random.rand(len(df)) < 0.8
+
+
+def main():
+    #load IBM stonk data 
+    ibm_df = pd.read_csv('IBM.csv')
+    test_train_split(ibm_df)
+
+
+
+if __name__=="__main__":
+    main()
 
 
 
