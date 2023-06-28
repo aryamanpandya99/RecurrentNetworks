@@ -7,17 +7,21 @@ Model and trainer implementation
 import torch 
 import pandas as pd
 import numpy as np
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
 import plotly
+from torchtext.datasets import AG_NEWS
 from torch import nn
+from torch.utils.data import Dataset, DataLoader
 
 #Class definition of Vanilla RNN 
 class VanillaRNN(nn.Module): 
     
-    def __init__(self, len_in, len_h, len_out) -> None:
+    def __init__(self, input_len, hidden_size, output_len) -> None:
         super(VanillaRNN, self).__init__()
-        self.len_h = len_h #size of hidden state
-        self.in_h = nn.Linear(len_in + len_h, len_h) #graph module to compute next hidden state 
-        self.in_out = nn.Linear(len_in + len_h, len_out) #computes output 
+        self.hidden_size = hidden_size 
+        self.in_h = nn.Linear(input_len + hidden_size, hidden_size) #graph module to compute next hidden state 
+        self.in_out = nn.Linear(input_len + hidden_size, output_len) 
 
     def forward(self, x, h):
         combined = torch.cat((x, h), 1)
@@ -67,18 +71,49 @@ def batched_data(df, n):
         y.append(df[i+n,:])
     return np.array(x), np.array(y)
 
+def collate_batch(batch):
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    label_list, text_list, offsets = [], [], [0]
+    
+    vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
+    vocab.set_default_index(vocab["<unk>"])
+    
+    tokenizer = get_tokenizer("basic_english")
+    label_pipeline = lambda x: int(x) - 1
+    text_pipeline = lambda x: vocab(tokenizer(x))
+    
+    for _label, _text in batch:
+        label_list.append(label_pipeline(_label))
+        processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
+        text_list.append(processed_text)
+        offsets.append(processed_text.size(0))
+    
+    label_list = torch.tensor(label_list, dtype=torch.int64)
+    offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
+    text_list = torch.cat(text_list)
+    
+    return label_list.to(device), text_list.to(device), offsets.to(device)
+
+def yield_tokens(data_iter, tokenizer):
+    for _, text in data_iter:
+        yield tokenizer(text)
 
 #execution 
 def main():
-    #load IBM stonk data 
-    ibm_df = pd.read_csv('IBM.csv')
-    train_set, test_set = test_train_split(ibm_df)
-
-    x, y = batched_data(train_set, 10)
-
-    print(train_set)
-    print(x)
-
+    
+    train_iter = (AG_NEWS(split="train"))
+    '''print(next(train_iter))
+    
+    tokenizer = get_tokenizer("basic_english")
+    vocab = build_vocab_from_iterator(yield_tokens(train_iter, tokenizer), specials=["<unk>"]) # specials allows us to handle out of distribution tokens 
+    vocab.set_default_index(vocab["<unk>"]) # set out of distrubution tokens by default to specials 
+    
+    print(vocab(['testing', 'our', 'tokenization', 'thishastobeoutofdistribution'])) #last two terms are out of distro and get assigned the same index '''
+    
+    train_loader = DataLoader(train_iter, batch_size = 8, shuffle = True, collate_fn = collate_batch)
+    
+    
 
 
 
