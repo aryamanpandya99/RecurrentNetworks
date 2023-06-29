@@ -26,13 +26,27 @@ class VanillaRNN(nn.Module):
         self.output_len = output_len 
         self.rnn = nn.RNN(nput_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, dropout=0.5,
                                 batch_first=True, bidirectional=True) #graph module to compute next hidden state 
-        self.in_out = nn.Linear(input_len + hidden_size, output_len) 
+        self.hidden2label = nn.Linear(2*hidden_size, 2)
+        self.softmax = nn.LogSoftmax(dim=1)
+        self.dropoutLayer = nn.Dropout()
 
     def forward(self, x, h):
-        combined = torch.cat((x, h), 1)
-        h_out = nn.Tanh(self.in_h(combined)) 
-        y = self.in_out(combined)
-        return y, h_out 
+        embedded = self.encoder(x)
+        output, hidden = self.rnn(embedded, h)  # Pass the initial hidden state 'h' to the RNN
+        
+        # Flatten the output tensor to match the linear layer input size
+        output = output.contiguous().view(-1, 2 * self.hidden_size)
+        
+        # Apply dropout to the flattened output
+        output = self.dropoutLayer(output)
+        
+        # Pass the output through the linear layer
+        output = self.hidden2label(output)
+        
+        # Apply softmax activation to get probabilities
+        output = self.softmax(output)
+        
+        return output, hidden
 
     def init_h(self):
         return torch.zeros(1, self.len_h)
@@ -81,7 +95,7 @@ def collate_batch(batch):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     label_list, text_list, offsets = [], [], [0]
     
-    vocab = build_vocab_from_iterator(yield_tokens(train_iter), specials=["<unk>"])
+    vocab = build_vocab_from_iterator(yield_tokens(batch), specials=["<unk>"])
     vocab.set_default_index(vocab["<unk>"])
     
     tokenizer = get_tokenizer("basic_english")
