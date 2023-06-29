@@ -17,10 +17,15 @@ from torch.utils.data import Dataset, DataLoader
 #Class definition of Vanilla RNN 
 class VanillaRNN(nn.Module): 
     
-    def __init__(self, input_len, hidden_size, output_len) -> None:
+    def __init__(self, vocab_size, embed_size, input_len, hidden_size, output_len, num_layers) -> None:
         super(VanillaRNN, self).__init__()
+        
+        self.encoder = nn.Embedding(vocab_size, embed_size, padding_idx=0)
         self.hidden_size = hidden_size 
-        self.in_h = nn.Linear(input_len + hidden_size, hidden_size) #graph module to compute next hidden state 
+        self.input_len = input_len 
+        self.output_len = output_len 
+        self.rnn = nn.RNN(nput_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, dropout=0.5,
+                                batch_first=True, bidirectional=True) #graph module to compute next hidden state 
         self.in_out = nn.Linear(input_len + hidden_size, output_len) 
 
     def forward(self, x, h):
