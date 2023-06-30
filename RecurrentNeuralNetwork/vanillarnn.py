@@ -26,13 +26,16 @@ class VanillaRNN(nn.Module):
         self.output_len = output_len 
         self.rnn = nn.RNN(nput_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, dropout=0.5,
                                 batch_first=True, bidirectional=True) #graph module to compute next hidden state 
+        
         self.hidden2label = nn.Linear(2*hidden_size, 2)
         self.softmax = nn.LogSoftmax(dim=1)
         self.dropoutLayer = nn.Dropout()
 
-    def forward(self, x, h):
+    def forward(self, x, text_len):
         embedded = self.encoder(x)
-        output, hidden = self.rnn(embedded, h)  # Pass the initial hidden state 'h' to the RNN
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_len)
+        output, hidden = self.rnn(packed_embedded)  # Pass the initial hidden state 'h' to the RNN
+        
         
         # Flatten the output tensor to match the linear layer input size
         output = output.contiguous().view(-1, 2 * self.hidden_size)
@@ -122,6 +125,8 @@ def yield_tokens(data_iter, tokenizer):
 def main():
     
     train_iter = (AG_NEWS(split="train"))
+    train, test = AG_NEWS()
+    print(train)
     '''print(next(train_iter))
     
     tokenizer = get_tokenizer("basic_english")
@@ -131,6 +136,25 @@ def main():
     print(vocab(['testing', 'our', 'tokenization', 'thishastobeoutofdistribution'])) #last two terms are out of distro and get assigned the same index '''
     
     train_loader = DataLoader(train_iter, batch_size = 8, shuffle = True, collate_fn = collate_batch)
+    print(train_loader.dataset.data)
+    
+    RANDOM_SEED = 123
+    torch.manual_seed(RANDOM_SEED)
+
+    VOCABULARY_SIZE = 5000
+    LEARNING_RATE = 1e-3
+    BATCH_SIZE = 128
+    NUM_EPOCHS = 50
+    DROPOUT = 0.5
+    DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+    EMBEDDING_DIM = 128
+    BIDIRECTIONAL = True
+    HIDDEN_DIM = 256
+    NUM_LAYERS = 2
+    OUTPUT_DIM = 4
+    
+    model = VanillaRNN()
     
     
 
