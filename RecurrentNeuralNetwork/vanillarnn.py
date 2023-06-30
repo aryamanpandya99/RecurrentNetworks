@@ -127,13 +127,6 @@ def main():
     train_iter = (AG_NEWS(split="train"))
     train, test = AG_NEWS()
     print(train)
-    '''print(next(train_iter))
-    
-    tokenizer = get_tokenizer("basic_english")
-    vocab = build_vocab_from_iterator(yield_tokens(train_iter, tokenizer), specials=["<unk>"]) # specials allows us to handle out of distribution tokens 
-    vocab.set_default_index(vocab["<unk>"]) # set out of distrubution tokens by default to specials 
-    
-    print(vocab(['testing', 'our', 'tokenization', 'thishastobeoutofdistribution'])) #last two terms are out of distro and get assigned the same index '''
     
     train_loader = DataLoader(train_iter, batch_size = 8, shuffle = True, collate_fn = collate_batch)
     print(train_loader.dataset.data)
