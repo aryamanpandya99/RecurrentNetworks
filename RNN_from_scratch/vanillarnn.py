@@ -7,49 +7,23 @@ Model and trainer implementation
 import torch 
 import pandas as pd
 import numpy as np
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
 import plotly
-from torchtext.datasets import AG_NEWS
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
 
 #Class definition of Vanilla RNN 
 class VanillaRNN(nn.Module): 
     
-    def __init__(self, vocab_size, embed_size, input_len, hidden_size, output_len, num_layers) -> None:
+    def __init__(self, len_in, len_h, len_out):
         super(VanillaRNN, self).__init__()
-        
-        self.encoder = nn.Embedding(vocab_size, embed_size, padding_idx=0)
-        self.hidden_size = hidden_size 
-        self.input_len = input_len 
-        self.output_len = output_len 
-        self.rnn = nn.RNN(nput_size=embed_size, hidden_size=hidden_size, num_layers=num_layers, dropout=0.5,
-                                batch_first=True, bidirectional=True) #graph module to compute next hidden state 
-        
-        self.hidden2label = nn.Linear(2*hidden_size, 2)
-        self.softmax = nn.LogSoftmax(dim=1)
-        self.dropoutLayer = nn.Dropout()
+        self.len_h = len_h #size of hidden state
+        self.in_h = nn.Linear(len_in + len_h, len_h) #graph module to compute next hidden state 
+        self.in_out = nn.Linear(len_in + len_h, len_out) #computes output 
 
-    def forward(self, x, text_len):
-        embedded = self.encoder(x)
-        packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_len)
-        output, hidden = self.rnn(packed_embedded)  # Pass the initial hidden state 'h' to the RNN
-        
-        
-        # Flatten the output tensor to match the linear layer input size
-        output = output.contiguous().view(-1, 2 * self.hidden_size)
-        
-        # Apply dropout to the flattened output
-        output = self.dropoutLayer(output)
-        
-        # Pass the output through the linear layer
-        output = self.hidden2label(output)
-        
-        # Apply softmax activation to get probabilities
-        output = self.softmax(output)
-        
-        return output, hidden
+    def forward(self, x, h):
+        combined = torch.cat((x, h), 1)
+        h_out = nn.Tanh(self.in_h(combined)) 
+        y = self.in_out(combined)
+        return y, h_out 
 
     def init_h(self):
         return torch.zeros(1, self.len_h)
@@ -93,63 +67,21 @@ def batched_data(df, n):
         y.append(df[i+n,:])
     return np.array(x), np.array(y)
 
-def collate_batch(batch):
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    label_list, text_list, offsets = [], [], [0]
-    
-    vocab = build_vocab_from_iterator(yield_tokens(batch), specials=["<unk>"])
-    vocab.set_default_index(vocab["<unk>"])
-    
-    tokenizer = get_tokenizer("basic_english")
-    label_pipeline = lambda x: int(x) - 1
-    text_pipeline = lambda x: vocab(tokenizer(x))
-    
-    for _label, _text in batch:
-        label_list.append(label_pipeline(_label))
-        processed_text = torch.tensor(text_pipeline(_text), dtype=torch.int64)
-        text_list.append(processed_text)
-        offsets.append(processed_text.size(0))
-    
-    label_list = torch.tensor(label_list, dtype=torch.int64)
-    offsets = torch.tensor(offsets[:-1]).cumsum(dim=0)
-    text_list = torch.cat(text_list)
-    
-    return label_list.to(device), text_list.to(device), offsets.to(device)
-
-def yield_tokens(data_iter, tokenizer):
-    for _, text in data_iter:
-        yield tokenizer(text)
 
 #execution 
 def main():
-    
-    train_iter = (AG_NEWS(split="train"))
-    train, test = AG_NEWS()
-    print(train)
-    
-    train_loader = DataLoader(train_iter, batch_size = 8, shuffle = True, collate_fn = collate_batch)
-    print(train_loader.dataset.data)
-    
-    RANDOM_SEED = 123
-    torch.manual_seed(RANDOM_SEED)
+    #load IBM stonk data 
+    ibm_df = pd.read_csv('IBM.csv')
+    train_set, test_set = test_train_split(ibm_df)
 
-    VOCABULARY_SIZE = 5000
-    LEARNING_RATE = 1e-3
-    BATCH_SIZE = 128
-    NUM_EPOCHS = 50
-    DROPOUT = 0.5
-    DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    x, y = batched_data(train_set, 10)
 
-    EMBEDDING_DIM = 128
-    BIDIRECTIONAL = True
-    HIDDEN_DIM = 256
-    NUM_LAYERS = 2
-    OUTPUT_DIM = 4
-    
-    model = VanillaRNN()
-    
-    
+    print(x)
+    print(y)
+
+    print(x.size)
+    print(y.size)
+
 
 
 
