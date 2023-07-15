@@ -2,7 +2,7 @@
 
 This repository, Sequential Machine Learning, is a personal project dedicated to my exploration and experiments with sequential data processing using advanced Machine Learning techniques such as Recurrent Neural Networks (RNNs), Long Short-Term Memory (LSTM) networks, Gated Recurrent Units (GRUs), and Transformer models.
 
-The main objective here is to build proficiency in handling sequential data, which is integral to many application areas, from Natural Language Processing (NLP) to stock forecasting. Over time, my aspiration is to apply these techniques to more complex robotics problems in the field of prediction and decision making, specifically within the context of autonomous driving systems.
+The main objective here is to build proficiency in handling sequential data, which is integral to many application areas, from Natural Language Processing (NLP) to stock forecasting. Over time, my aspiration is to apply these techniques to more complex robotics problems in the field of prediction and decision making.
 
 ## Table of Contents
 
