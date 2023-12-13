@@ -39,3 +39,5 @@ class lstm(nn.Module):
     
     def init_h(self):
         return torch.zeros(1, self.hidden_size)
+    
+class 
